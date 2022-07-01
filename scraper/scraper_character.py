@@ -1,8 +1,9 @@
 from bs4 import BeautifulSoup
+from psycopg2 import IntegrityError
 from requests import get
 import requests
-import dateparser
 import re
+
 from market.models import Character, Server
 
 url = "https://www.tibia.com/charactertrade/?subtopic=currentcharactertrades"
@@ -15,23 +16,22 @@ def get_all_pages_links():
     last_number = re.findall(regex, last_page_url)[0] # aby odebrac stringa z naszej listy z jednym elementem, pobieramy z niego index [0] i daje nam masz liczbe jako int. zmienna last_number bedzie przechowywac naszego inta
 
     all_links = [] # w tej liscie biedziemy przechowywac wszystkie linki do aukcji postaci
+    print(all_links)
+    for nr in range(1, int(last_number) + 1):
+        for nr in range(1, 10): # w tej petli zmienna nr jest numerem (po kolei) w przedziale od 1 do numeru ostatniej strony
+            r = requests.get(f"https://www.tibia.com/charactertrade/?currentpage={nr}") # zmienna r pobiera zapytanie z servera dla kazdego linka\
+            soup = BeautifulSoup(r.content, "html.parser") # wtswietla nam caly kod html z danego url-a
+            selector = soup.find_all("div", class_="AuctionCharacterName") # zmienna 'selector' precyzuje nam taga ktory nas interesuje w tym przypadku dag "div" z klasa AuctionCharacterName
 
-    # for nr in range(1, int(last_number) + 1):
-    for nr in range(1, 10): # w tej petli zmienna nr jest numerem (po kolei) w przedziale od 1 do numeru ostatniej strony
-        r = requests.get(f"https://www.tibia.com/charactertrade/?currentpage={nr}") # zmienna r pobiera zapytanie z servera dla kazdego linka\
-        soup = BeautifulSoup(r.content, "html.parser") # wtswietla nam caly kod html z danego url-a
-        selector = soup.find_all("div", class_="AuctionCharacterName") # zmienna 'selector' precyzuje nam taga ktory nas interesuje w tym przypadku dag "div" z klasa AuctionCharacterName
-
-        for auction in selector: # pojedynczy div jest przypisany do zmiennej auction, jest literowany po selectorze w ktorym znajduje sie wiele divow
-            auction_link = auction.find("a", href=True)["href"] # do zmiennej auction_link jest przypisany link juz obrany z tagow a i href
-            all_links.append(auction_link) # obrane (czyste) linki do naszych aukcji sa dodawane do listy "all_links"
+            for auction in selector: # pojedynczy div jest przypisany do zmiennej auction, jest literowany po selectorze w ktorym znajduje sie wiele divow
+                auction_link = auction.find("a", href=True)["href"] # do zmiennej auction_link jest przypisany link juz obrany z tagow a i href
+                all_links.append(auction_link) # obrane (czyste) linki do naszych aukcji sa dodawane do listy "all_links"
     return all_links
 
 
 def fetch_all_pages(all_links):
     for link in all_links:
         fetch_single_page(link)
-
 
 def fetch_single_page(link):
 
@@ -46,6 +46,9 @@ def fetch_single_page(link):
     data_level = re.findall(regex, basic_data)[0] #dostajemy liste z jednym elementem, aby wyciagnac parametr level to mucimy wyciagnac pierwszy index z listy
     regex = r'World: ([\s\S]+)' # ten regeks wyciaga to co jest po elemencie tekstu "world:"
     data_world = re.findall(regex, basic_data) # szykamy naszego regeksa w teksiecie i wypluwa na nasz server
+    data_world = data_world[0]
+    world = Server.objects.get(server=data_world)
+    data_world = world
     regex = r'Vocation: ([\s\S]+)'
     data_vocation = re.findall(regex, basic_data)[0].split(' | ')[0] # podzielilismy nasz teks na liste i wyciagamy pierwszy (zerowy index) element ktorym jest nazwa vokacji
     data_sex = re.findall(regex, basic_data)[0].split(' | ')[1]
@@ -159,11 +162,6 @@ def fetch_single_page(link):
                 break
         regex = r'Results: ([\s\S]+)'
         quantity_basic_mount = re.findall(regex, mount)[0]
-        print(quantity_basic_mount)
-
-
-
-
 
     '''sekcja ponizej sprawdza ilosc podstawowych outfitow jaka posiada postac na aukcji. Roznica pozmiedzy total_mounts a basic_mounts da nam ilosc store_mounts'''
 
@@ -182,7 +180,7 @@ def fetch_single_page(link):
 
     regex = r'Results: ([\s\S]+)'
     quantity_basic_outfit = re.findall(regex, outfit)[0]
-    print(quantity_basic_outfit)
+    # print(quantity_basic_outfit)
 
     '''sekcja ponizej zapisuje do slownika/jasona poziomy i procenty do nastepnego lvla danego skila'''
 
@@ -191,38 +189,21 @@ def fetch_single_page(link):
     skills_list_2 = basic_outfit_list.findAll('tr', class_='Odd')
 
     data_skills = {}
-    # name_skill_list = []
-    # lvl_skill_list = []
-    # percentage_skill_list = []
+
 
     for type_of_skill in skills_list_1:
         name_skill = type_of_skill.find('td', class_='LabelColumn').get_text()
-        # name_skill_list.append(name_skill)
         lvl_skill = type_of_skill.find('td', class_='LevelColumn').get_text()
-        # lvl_skill_list.append(lvl_skill)
         percentage_skill = type_of_skill.find('td', class_='PercentageColumn').get_text()
         data_skills[name_skill] = (lvl_skill, percentage_skill)
-        # percentage_skill_list.append(percentage_skill)
-        # skill_values = [(lvl, precentage) for lvl in lvl_skill for precentage in precentage_skill]
 
-
-        # print(skill_values)
-        # print(lvl_skill)
-        # print(percentage_skill)
-        # skill_values = []
-        # for value in skill_values:
-        #     value = skill_values.append(zip(lvl_skill, percentage_skill)
-
-    # print(skill_values)
 
     for type_of_skill in skills_list_2:
         name_skill = type_of_skill.find('td', class_='LabelColumn').get_text()
-        # name_skill_list.append(name_skill)
         lvl_skill = type_of_skill.find('td', class_='LevelColumn').get_text()
-        # lvl_skill_list.append(lvl_skill)
         percentage_skill = type_of_skill.find('td', class_='PercentageColumn').get_text()
         data_skills[name_skill] = (lvl_skill, percentage_skill)
-        # percentage_skill_list.append(percentage_skill)
+
 
     '''sekcja ponizej zapisuje do zmiennej data_price aktualna cene postaci'''
     basic_data = soup.find('div', class_='ShortAuctionDataBidRow')
@@ -239,258 +220,84 @@ def fetch_single_page(link):
     store_mounts = int(data_mount) - int(quantity_basic_mount)
     store_outfits = int(data_outfit) - int(quantity_basic_outfit)
 
+    try:
+        basic_data = soup.find('div', class_='AuctionBodyBlock CurrentBid')
+        data_auction_status = basic_data.find('div', class_='AuctionInfo').get_text()
+    except AttributeError:
+        data_auction_status = None
 
-    print(data_auction_start)
-    print(data_auction_end)
-    print(f'auction link: {link}')
-    print(f'status bid: {status_bid}')
-    print(f'auctions price {data_price}')
-    print(f'name: {data_name}')
-    print(f'level: {data_level}')
-    print(f'sex: {data_sex}')
-    print(f'vocation: {data_vocation}')
-    print(f'server: {data_world[0]}')
-    print(f'hit points: {data_hp}')
-    print(f'capacity points: {data_capacity}')
-    print(f'gold balance: {data_gold}')
-    print(f'available charm points: {data_available_charm_point}')
-    print(f'charm expension: {data_charm_expension}')
-    print(f'additional prey slot: {data_prey_slot}')
-    print(f'mana points: {data_mana}')
-    print(f'speed points: {data_speed}')
-    print(f'experience points: {data_experience}')
-    print(f'charms list: {data_charms}')
-    print(f'quantity charms: {len(data_charms)}')
-    print(f'quests list: {data_quests_list}')
-    print(f'quantity quests: {len(data_quests_list)}')
-    print(f'all outfits: {data_outfit}')
-    print(f'basic outfits: {quantity_basic_outfit}')
-    print(f'store outfits: {store_outfits}')
-    print(f'all mounts: {data_mount}')
-    print(f'basic mounts: {quantity_basic_mount}')
-    print(f'store mounts: {store_mounts}')
-    print(f'skils: {data_skills}')
 
-    Character.objects.create(level=data_level, experience=data_experience, gold=data_gold, auction_link=link,
-                             vocation=data_vocation, sex=data_sex, server=data_world[0], skills=data_skills, hp=data_hp,
-                             mana=data_mana, capacity=data_capacity, speed=data_speed, all_outfit=data_outfit,
+    try:
+        Character.objects.create(level=data_level, experience=data_experience, gold=data_gold, auction_link=link,
+                             vocation=data_vocation, sex=data_sex, server=data_world, skills=data_skills, hp=data_hp,
+                             mana=data_name, capacity=data_capacity, speed=data_speed, all_outfit=data_outfit,
                              basic_outfit=quantity_basic_outfit, store_outfit=store_outfits, all_mount=data_mount,
                              basic_mount=quantity_basic_mount, store_mount=store_mounts, charm_list=data_charms,
                              quantity_charms=len(data_charms), charm_point=data_available_charm_point,
                              quest_list=data_quests_list, quantity_quest=len(data_quests_list),
                              charm_expension=True if data_charm_expension == 'yes' else False,
-                             prey_slot=True if data_prey_slot == 1 else False, auction_status=status_bid, price=status_bid,
-                             auction_start=data_auction_start, auction_end=data_auction_end)
-
-
-def tibia_worlds():
-    '''sekcja ponizej zapisuje do slownika/jasona dane na temat serwerow (nazwe, ich lokacje oraz typ servera)'''
-
-    world_url = "https://www.tibia.com/community/?subtopic=worlds"
-    r = requests.get(world_url)
-    soup = BeautifulSoup(r.content, 'html.parser')
-    basic_data = soup.findAll('table', class_='TableContent')
-    world_all_list = basic_data[2]
-    html_all_data_worlds_1 = world_all_list.findAll('tr', class_='Odd')
-    html_all_data_worlds_2 = world_all_list.findAll('tr', class_='Even')
-
-    data_world = {}
-
-    for all_data_worlds in html_all_data_worlds_1:
-        data_worlds = all_data_worlds.findAll('td')
-        battleye_data = all_data_worlds.find('img')['src']
-        if 'battleyeinitial' in battleye_data:
-            battleye = "green battleye"
-        elif 'battleye' in battleye_data:
-            battleye = 'yelow battleye'
-        else:
-            battleye = ' nonprotected'
-        print(battleye_data)
-        worlds = data_worlds[0].get_text()
-        location = data_worlds[2].get_text()
-        pvp_type = data_worlds[3].get_text()
-
-        data_world[worlds]= (location, pvp_type, battleye)
-
-
-    for all_data_worlds in html_all_data_worlds_2:
-        data_worlds = all_data_worlds.findAll('td')
-        battleye_data = all_data_worlds.find('img')['src']
-        if 'battleyeinitial' in battleye_data:
-            battleye = "green battleye"
-        elif 'battleye' in battleye_data:
-            battleye = 'yelow battleye'
-        else:
-            battleye = ' nonprotected'
-        world = data_worlds[0].get_text()
-        location = data_worlds[2].get_text()
-        pvp_type = data_worlds[3].get_text()
-        data_world[world]= (location, pvp_type, battleye)
-
-    for world, data in data_world.items():
-        data[1]
-
-        Server.objects.create(server=world, server_type=data[1], location=data[0], battlEye=data[2])
-
-
-
-# all_links = get_all_pages_links()
-# fetch_all_pages(all_links)
+                             prey_slot=True if data_prey_slot == 1 else False, bid_status=status_bid,
+                             price=data_price, auction_start=data_auction_start, auction_end=data_auction_end,
+                             auctions_status=data_auction_status)
+    except IntegrityError:
+        pass
 
 
 
 
 
+all_links = get_all_pages_links()
+fetch_all_pages(all_links)
 
 
 
-# url = "https://www.tibia.com/charactertrade/?subtopic=currentcharactertrades&page=details&auctionid=808679&source=overview&filter_profession=0&filter_levelrangefrom=0&filter_levelrangeto=0&filter_world=&filter_worldpvptype=9&filter_worldbattleyestate=0&filter_skillid=&filter_skillrangefrom=0&filter_skillrangeto=0&order_column=101&order_direction=1&searchtype=1&currentpage=1"
-#
-#
+
+
+# # print(data_auction_start)
+# # print(data_auction_end)
+# print(f'auction link: {link}')
+# print(f'status bid: {status_bid}')
+# print(f'auctions price {data_price}')
+# print(f'name: {data_name}')
+# print(f'level: {data_level}')
+# print(f'sex: {data_sex}')
+# print(f'vocation: {data_vocation}')
+# print(f'server: {data_world[0]}')
+# print(f'hit points: {data_hp}')
+# print(f'capacity points: {data_capacity}')
+# print(f'gold balance: {data_gold}')
+# print(f'available charm points: {data_available_charm_point}')
+# print(f'charm expension: {data_charm_expension}')
+# print(f'additional prey slot: {data_prey_slot}')
+# print(f'mana points: {data_mana}')
+# print(f'speed points: {data_speed}')
+# print(f'experience points: {data_experience}')
+# print(f'charms list: {data_charms}')
+# print(f'quantity charms: {len(data_charms)}')
+# print(f'quests list: {data_quests_list}')
+# print(f'quantity quests: {len(data_quests_list)}')
+# print(f'all outfits: {data_outfit}')
+# print(f'basic outfits: {quantity_basic_outfit}')
+# print(f'store outfits: {store_outfits}')
+# print(f'all mounts: {data_mount}')
+# print(f'basic mounts: {quantity_basic_mount}')
+# print(f'store mounts: {store_mounts}')
+# print(f'skils: {data_skills}')
+
+
+
+
+# url = "https://www.tibia.com/charactertrade/?subtopic=currentcharactertrades&page=details&auctionid=899685&source=overview&filter_profession=0&filter_levelrangefrom=0&filter_levelrangeto=0&filter_world=&filter_worldpvptype=9&filter_worldbattleyestate=0&filter_skillid=&filter_skillrangefrom=0&filter_skillrangeto=0&order_column=101&order_direction=1&searchtype=1&currentpage=1"
 # r = requests.get(url)# jest wysylane zapytanie do servera
 # soup = BeautifulSoup(r.content, "html.parser") # wyswietla nam caly kod html z danego linku
 #
-# basic_data = soup.find('div', class_='AuctionBodyBlock ShortAuctionData')
-# auction_start = basic_data.find('div', class_='ShortAuctionDataValue').get_text()
-# auction_end = basic_data.findAll('div', class_='ShortAuctionDataValue')[1].get_text()
+# basic_data = soup.find('div', class_='AuctionBodyBlock CurrentBid')
+# data_auction_start = basic_data.find('div', class_='AuctionInfo').get_text()
 #
-# data_auction_start = dateparser.parse(auction_start)
-# data_auction_end = dateparser.parse(auction_end)
 #
-# print(auction_start)
-# print(auction_end)
+#
 # print(data_auction_start)
-# print(data_auction_end)
 
-
-
-
-
-#
-# data_charms = []
-# for charms_list in charms_list1:
-#     charms = charms_list.findAll('td')
-#     for charm in charms:
-#         char = charm.get_text()
-#         data_charms.append(char.replace(',', ''))
-# data_charms = [charm_name for charm_name in data_charms if not charm_name.isalpha()]
-#
-# for charms_list in charms_list2:
-#     charms = charms_list.findAll('td')
-#     for charm in charms:
-#         char = charm.get_text()
-#         data_charms.append(char.replace(',', ''))
-# data_charms = [charm_name for charm_name in data_charms if not charm_name.isdigit()]
-#
-# print(data_charms)
-
-
-
-
-
-
-# url = "https://www.tibia.com/charactertrade/?subtopic=currentcharactertrades&page=details&auctionid=807517&source=overview&filter_profession=0&filter_levelrangefrom=0&filter_levelrangeto=0&filter_world=&filter_worldpvptype=9&filter_worldbattleyestate=0&filter_skillid=&filter_skillrangefrom=0&filter_skillrangeto=0&order_column=101&order_direction=1&searchtype=1&currentpage=1"
-# r = requests.get(url) # jest wysylane zapytanie do servera
-# soup = BeautifulSoup(r.content, "html.parser") # wyswietla nam caly kod html z danego linku
-#
-# basic_data = soup.findAll('div', class_='TableContentContainer')
-# basic_mount_list = basic_data[14]
-# mount_list = basic_mount_list.findAll('div')
-#
-#
-# mount = 0
-#
-# if mount_list:  # w tym momencie jezeli if jest jest falsem to nie wykona sie petla. w przeciwnym wypadku jak bedie true to petla nadpisze zmienna mount
-#     for quantity_mount in mount_list:
-#         mount = quantity_mount.get_text()
-#         if 'Results: ' in mount:
-#             break
-#     regex = r'Results: ([\s\S]+)'
-#     quantity_basic_mount = re.findall(regex, mount)
-#     print(type(quantity_basic_mount))
-
-
-
-
-#
-# mount = 0
-#
-# if mount_list:  # w tym momencie jezeli if jest jest falsem to nie wykona sie petla. w przeciwnym wypadku jak bedie true to petla nadpisze zmienna mount
-#     for quantity_mount in mount_list:
-#         mount = quantity_mount.get_text()
-#         if 'Results: ' in mount:
-#             break
-#     regex = r'Results: ([\s\S]+)'
-#     mount_all_basikdwd = re.findall(regex, mount)[0]
-#
-#
-# print(mount_all_basikdwd)
-
-
-
-
-
-
-
-
-
-
-
-
-
-def tibia_worlds():
-    '''sekcja ponizej zapisuje do slownika/jasona dane na temat serwerow (nazwe, ich lokacje oraz typ servera)'''
-
-    world_url = "https://www.tibia.com/community/?subtopic=worlds"
-    r = requests.get(world_url)
-    soup = BeautifulSoup(r.content, 'html.parser')
-    basic_data = soup.findAll('table', class_='TableContent')
-    world_all_list = basic_data[2]
-    html_all_data_worlds_1 = world_all_list.findAll('tr', class_='Odd')
-    html_all_data_worlds_2 = world_all_list.findAll('tr', class_='Even')
-
-    data_world = {}
-
-    for all_data_worlds in html_all_data_worlds_1:
-        data_worlds = all_data_worlds.findAll('td')
-        battleye_data = all_data_worlds.find('img')['src']
-        if 'battleyeinitial' in battleye_data:
-            battleye = "green battleye"
-        elif 'battleye' in battleye_data:
-            battleye = 'yelow battleye'
-        else:
-            battleye = ' nonprotected'
-        print(battleye_data)
-        worlds = data_worlds[0].get_text()
-        location = data_worlds[2].get_text()
-        pvp_type = data_worlds[3].get_text()
-
-        data_world[worlds]= (location, pvp_type, battleye)
-
-
-    for all_data_worlds in html_all_data_worlds_2:
-        data_worlds = all_data_worlds.findAll('td')
-        battleye_data = all_data_worlds.find('img')['src']
-        if 'battleyeinitial' in battleye_data:
-            battleye = "green battleye"
-        elif 'battleye' in battleye_data:
-            battleye = 'yelow battleye'
-        else:
-            battleye = ' nonprotected'
-        worlds = data_worlds[0].get_text()
-        location = data_worlds[2].get_text()
-        pvp_type = data_worlds[3].get_text()
-        data_world[worlds]= (location, pvp_type, battleye)
-
-
-
-
-
-
-
-# auction_start
-# auction_end
-# auction_status
 
 
 
