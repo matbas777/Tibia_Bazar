@@ -54,7 +54,11 @@ def tibia_worlds():
         data[1]
 
 
+        try:
+            Server.objects.create(server=world, server_type=data[1], location=data[0], battlEye=data[2])
+        except IntegrityError:
+            pass
 
-        Server.objects.create(server=world, server_type=data[1], location=data[0], battlEye=data[2])
+
 tibia_worlds()
 

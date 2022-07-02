@@ -2,7 +2,6 @@ from bs4 import BeautifulSoup
 from psycopg2 import IntegrityError
 import requests
 import re
-
 from market.models import Character
 
 url = "https://www.tibia.com/charactertrade/?subtopic=currentcharactertrades"
@@ -15,8 +14,9 @@ def get_all_pages_links():
     last_number = re.findall(regex, last_page_url)[0] # aby odebrac stringa z naszej listy z jednym elementem, pobieramy z niego index [0] i daje nam masz liczbe jako int. zmienna last_number bedzie przechowywac naszego inta
 
     all_links = [] # w tej liscie biedziemy przechowywac wszystkie linki do aukcji postaci
-    print(all_links)
+
     for nr in range(1, int(last_number) + 1):
+
         for nr in range(1, 10): # w tej petli zmienna nr jest numerem (po kolei) w przedziale od 1 do numeru ostatniej strony
             r = requests.get(f"https://www.tibia.com/charactertrade/?currentpage={nr}") # zmienna r pobiera zapytanie z servera dla kazdego linka\
             soup = BeautifulSoup(r.content, "html.parser") # wtswietla nam caly kod html z danego url-a
@@ -24,9 +24,11 @@ def get_all_pages_links():
 
             for auction in selector: # pojedynczy div jest przypisany do zmiennej auction, jest literowany po selectorze w ktorym znajduje sie wiele divow
                 auction_link = auction.find("a", href=True)["href"] # do zmiennej auction_link jest przypisany link juz obrany z tagow a i href
-                all_links.append(auction_link) # obrane (czyste) linki do naszych aukcji sa dodawane do listy "all_links"
+                auction_link = auction_link.split('&source=overview')
+                all_links.append(auction_link[0]) # obrane (czyste) linki do naszych aukcji sa dodawane do listy "all_links"
 
     for link in all_links:
+        print(link)
         try:
             Character.objects.create(auction_link=link)
         except IntegrityError:
