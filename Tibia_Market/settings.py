@@ -82,8 +82,8 @@ DATABASES = {
         "NAME": "tibiamarket",
         "USER": "postgres",
         "PASSWORD": "postgres",
-        "HOST": 'localhost',
-        "PORT": '5433',
+        "HOST": "localhost",
+        "PORT": "5433",
         "CONN_MAX_AGE": 2000,
     }
 }
