@@ -1,19 +1,14 @@
 from bs4 import BeautifulSoup
-from psycopg2 import IntegrityError
-from requests import get
 import requests
-import dateparser
-import re
 from market.models import Character
 from time import sleep
 
 
 def update_character():
-    # Character.objects.filter(commission=0).values_list('auction_link', flat=True) # filtracja po prwizji(commission) kiedy jest rowna zero i zwraca linki w liscie[]
     for link in Character.objects.filter(commission=0).values_list(
         "auction_link", flat=True
     ):
-        sleep(0.5)
+        sleep(0.4)
         r = requests.get(link)
         soup = BeautifulSoup(r.content, "html.parser")
         basic_data = soup.find("div", class_="ShortAuctionDataBidRow")
@@ -73,10 +68,3 @@ def update_character():
 
 
 update_character()
-
-# from django.core.mail import send_mail
-
-# smtp.sendgrid.net
-
-# send_mail('testowy mail', 'zobaczymy czy wysle maila na podany adres', 'osiedle.potok@gmail.com', ['matbas777@gmail.com'], fail_silently=False)
-# # send_mail('testowy mail', 'zobaczymy czy wysle maila na podany adres', 'matbas777@gmail.com', ['matbas777@gmail.com'], fail_silently=False)

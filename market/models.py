@@ -40,7 +40,7 @@ class Character(models.Model):
     prey_slot = models.BooleanField(null=True, blank=True)
     quest_list = ArrayField(
         base_field=models.CharField(max_length=300), null=True, blank=True
-    )  # mozna podac liste
+    )
     quantity_quest = models.IntegerField(null=True, blank=True)
     auctions_status = models.CharField(max_length=264, null=True, blank=True)
     commission = models.IntegerField(default=0)

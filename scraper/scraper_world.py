@@ -7,7 +7,6 @@ from market.models import Server
 
 
 def tibia_worlds():
-    """sekcja ponizej zapisuje do slownika/jasona dane na temat serwerow (nazwe, ich lokacje oraz typ servera)"""
 
     world_url = "https://www.tibia.com/community/?subtopic=worlds"
     r = requests.get(world_url)

@@ -33,15 +33,13 @@ class AuctionsDataView(APIView):
         from_date = filter_serializer.validated_data.get("from_date")
         to_date = filter_serializer.validated_data.get("to_date")
 
-        # nickname_qs = Character.objects.filter(character_name=nickname)
-        # date_qs = Character.objects.filter(auction_end__gte=from_date, auction_end__lte=to_date)
         dict_filter = {}
         if nickname:
             dict_filter["character_name"] = nickname
         if from_date:
-            dict_filter["auction_end__gte"] = from_date
+            dict_filter["auction_end__date__gte"] = from_date
         if to_date:
-            dict_filter["auction_end__lte"] = to_date
+            dict_filter["auction_end__date__lte"] = to_date
 
         for auction in characters_auctions.filter(**dict_filter):
             data_auction.append(
@@ -69,14 +67,14 @@ class CipSoftCommissionView(APIView):
         filter_serializer.is_valid(raise_exception=True)
 
         from_date = filter_serializer.validated_data.get("from_date")
+
         to_date = filter_serializer.validated_data.get("to_date")
-        # date_qs = Character.objects.filter(auction_end__gte=from_date, auction_end__lte=to_date)
 
         dict_filter = {}
         if from_date:
-            dict_filter["auction_end__gte"] = from_date
+            dict_filter["auction_end__date__gte"] = from_date
         if to_date:
-            dict_filter["auction_end__lte"] = to_date
+            dict_filter["auction_end__date__lte"] = to_date
 
         auctions = Character.objects.filter(**dict_filter)
 
